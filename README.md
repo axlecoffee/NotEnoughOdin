@@ -42,3 +42,5 @@ dm me for help or whatever @axle.coffee on discord
 
 proof of concept educational purposes only dont actually use this LOL 
 (finally ended the "you cant add your own mods to lunar 1.8.9 no custom launcher) 
+
+# AGAIN I DONT OWN THIS DONT ANGY THANKS LOVE UUU GO TO THEIR OWN PAGES 
