@@ -1,0 +1,88 @@
+/*
+ * Copyright (C) 2025 NotEnoughUpdates contributors
+ *
+ * This file is part of NotEnoughUpdates.
+ *
+ * NotEnoughUpdates is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * NotEnoughUpdates is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with NotEnoughUpdates. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package io.github.moulberry.notenoughupdates.odinclient.odinclient.features.impl.floor7.p3
+
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.events.impl.GuiEvent
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.events.impl.TerminalEvent
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.features.Module
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.features.impl.floor7.p3.TerminalSolver
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.features.impl.floor7.p3.TerminalTypes
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.features.settings.impl.NumberSetting
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.utils.skyblock.ClickType
+import io.github.moulberry.notenoughupdates.odinclient.odinmain.utils.skyblock.devMessage
+import net.minecraftforge.fml.common.eventhandler.EventPriority
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
+import net.minecraftforge.fml.common.gameevent.TickEvent
+import java.util.*
+
+object QueueTerms : Module(
+    name = "Queue Terms",
+    desc = "Queues clicks in terminals to ensure every click is registered (only works in custom term gui).",
+    tag = TagType.RISKY
+) {
+    private val dispatchDelay by NumberSetting("Dispatch Delay", 140L, 140L, 300L, unit = "ms", desc = "The delay between each click.")
+    private data class Click(val slot: Int, val button: Int)
+    private val queue: Queue<Click> = LinkedList()
+    private var lastClickTime = 0L
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    fun onCustomTermClick(event: GuiEvent.CustomTermGuiClick) {
+        with (TerminalSolver.currentTerm ?: return) {
+            if (type == TerminalTypes.MELODY || TerminalSolver.renderType != 3 || !isClicked || !canClick(event.slot, event.button)) return
+
+            queue.offer(Click(event.slot, event.button))
+            simulateClick(event.slot, if (event.button == 0) ClickType.Middle else ClickType.Right)
+
+            devMessage("§aQueued click on slot ${event.slot}")
+            event.isCanceled = true
+        }
+    }
+
+    @SubscribeEvent
+    fun onTick(event: TickEvent.ClientTickEvent) {
+        with (TerminalSolver.currentTerm ?: return) {
+            if (
+                event.phase != TickEvent.Phase.START ||
+                type == TerminalTypes.MELODY ||
+                TerminalSolver.renderType != 3 ||
+                System.currentTimeMillis() - lastClickTime < dispatchDelay ||
+                queue.isEmpty() ||
+                isClicked
+            ) return
+            val click = queue.poll() ?: return
+            click(click.slot, if (click.button == 0) ClickType.Middle else ClickType.Right, false)
+            devMessage("§dDispatched click on slot ${click.slot}")
+            lastClickTime = System.currentTimeMillis()
+        }
+    }
+
+    @SubscribeEvent
+    fun onTerminalUpdate(event: TerminalEvent.Updated) {
+        with (TerminalSolver.currentTerm ?: return) {
+            if (type == TerminalTypes.MELODY || TerminalSolver.renderType != 3 || queue.isEmpty()) return
+            queue.forEach { simulateClick(it.slot, if (it.button == 0) ClickType.Middle else ClickType.Right) }
+        }
+    }
+
+    @SubscribeEvent
+    fun onTerminalLeft(event: TerminalEvent.Closed) {
+        queue.clear()
+    }
+}
