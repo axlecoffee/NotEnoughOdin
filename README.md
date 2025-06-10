@@ -1,5 +1,8 @@
 # NotEnoughOdin
 A lunar client designed implementation of OdinClient 1.3.1 And NotEnoughUpdates 2.5.0 
+![image](https://github.com/user-attachments/assets/1229e5e9-ca36-47ea-84e8-096b376c4715)
+![image](https://github.com/user-attachments/assets/e98caf66-4bb5-4286-9a0a-ced2a74cb0f6)
+![image](https://github.com/user-attachments/assets/e32243ce-5b49-4e34-a9c6-033171139bbd)
 
 
 # Guide
